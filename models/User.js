@@ -1,5 +1,7 @@
+const crypto = require("crypto");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
 const UserSchema = mongoose.Schema({
   username: {
@@ -25,7 +27,7 @@ const UserSchema = mongoose.Schema({
   resetPasswordExpire: Date,
 });
 
-// pre-save hook is middleware that is executed when a document is saved  
+// pre-save hook is middleware that is executed when a document is saved
 // "this" inside of a pre-save hook is the document that is about to be saved
 UserSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
@@ -37,10 +39,26 @@ UserSchema.pre("save", async function (next) {
   next();
 });
 
-// Defining custom document instance methods 
-// Instances of Models are documents 
+// Defining custom document instance methods
+// Instances of Models are documents
 UserSchema.methods.matchPasswords = async function (password) {
   return await bcrypt.compare(password, this.password);
+};
+
+UserSchema.methods.getSignedToken = function () {
+  return jwt.sign({ id: this._id }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRE,
+  });
+};
+
+UserSchema.methods.getResetPasswordToken = function () {
+  const resetToken = crypto.randomBytes(20).toString("hex");
+  this.resetPasswordToken = crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
+  this.resetPasswordExpire = Date.now() + 10 * (60 * 1000);
+  return resetToken;
 };
 
 const User = mongoose.model("User", UserSchema);
