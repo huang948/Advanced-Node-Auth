@@ -21,7 +21,7 @@ const UserSchema = mongoose.Schema({
     type: String,
     required: [true, "Please add a password"],
     minlength: 6,
-    select: false,
+    select: false, // password path will not be returned because select is false
   },
   resetPasswordToken: String,
   resetPasswordExpire: Date,
@@ -52,12 +52,14 @@ UserSchema.methods.getSignedToken = function () {
 };
 
 UserSchema.methods.getResetPasswordToken = function () {
+  // Create a reset token
   const resetToken = crypto.randomBytes(20).toString("hex");
+  // Hash the resetToken in the user database
   this.resetPasswordToken = crypto
     .createHash("sha256")
     .update(resetToken)
     .digest("hex");
-  this.resetPasswordExpire = Date.now() + 10 * (60 * 1000);
+  this.resetPasswordExpire = Date.now() + 10 * (60 * 1000); // token expires in 10 minutes
   return resetToken;
 };
 
